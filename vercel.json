@@ -1,9 +1,15 @@
 {
-    "redirects": [
+    "version": 2,
+    "builds": [
         {
-            "source": "/:match*",
-            "destination": "/",
-            "permanent": false
+            "src": "package.json",
+            "use": "@vercel/static-build"
+        }
+    ],
+    "rewrites": [
+        {
+            "source": "/(.*)",
+            "destination": "/index.html"
         }
     ]
 }
