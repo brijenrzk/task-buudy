@@ -1,17 +1,31 @@
 import { useDispatch } from 'react-redux'
 import { loginFailure, loginStart, loginSuccess } from '../features/auth/authSlice';
-import { signInWithGoogle } from '../services/firebaseConfig';
+import { handleRedirectResult, signInWithGoogle } from '../services/firebaseConfig';
 import { useNavigate } from 'react-router-dom';
 import Cookies from 'js-cookie';
 import { fetchUserData } from '../features/auth/userSlice';
 import { AppDispatch } from '../redux/store';
 import { Button } from "@/components/ui/button"
+import { useEffect } from 'react';
 
 
 const SignIn = () => {
 
     const dispatch = useDispatch<AppDispatch>();
     const navigate = useNavigate();
+
+
+    useEffect(() => {
+        const getUserFromRedirect = async () => {
+            const user = await handleRedirectResult(); // Handle redirect result for mobile
+            if (user) {
+                Cookies.set('user', JSON.stringify(user), { expires: 7 });
+                dispatch(loginSuccess(user));
+                navigate('/dashboard');
+            }
+        };
+        getUserFromRedirect();
+    }, [dispatch, navigate]);
 
     const handleGoogleSignIn = async () => {
         dispatch(loginStart());
