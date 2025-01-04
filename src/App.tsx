@@ -8,13 +8,18 @@ import { fetchUserData } from './features/auth/userSlice';
 import { AppDispatch, RootState } from './redux/store';
 
 
+
 const App = () => {
   const dispatch = useDispatch<AppDispatch>();
   const status = useSelector((state: RootState) => state.user.status);
 
+
+
+
   useEffect(() => {
     dispatch(fetchUserData());
   }, [dispatch])
+
 
   if (status === 'loading') {
     return <div>Loading...</div>;

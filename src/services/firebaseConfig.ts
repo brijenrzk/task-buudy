@@ -2,7 +2,7 @@
 import { initializeApp } from "firebase/app";
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
-import { getAuth, GoogleAuthProvider, signOut, signInWithRedirect, signInWithPopup, getRedirectResult } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, signOut, signInWithPopup, } from "firebase/auth";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -23,34 +23,13 @@ const provider = new GoogleAuthProvider();
 
 // Function to handle Google sign-in
 export const signInWithGoogle = async () => {
-    const isMobile = /Mobi|Android/i.test(navigator.userAgent);
     try {
-        if (isMobile) {
-            // Use redirect method for mobile devices
-            await signInWithRedirect(auth, provider);
-        } else {
-            // Use popup method for desktop devices
-            const result = await signInWithPopup(auth, provider);
-            const user = result.user;
-            return user; // Return user info
-        }
+        // Use popup method for desktop devices
+        const result = await signInWithPopup(auth, provider);
+        const user = result.user;
+        return user; // Return user info
     } catch (error: any) {
         throw new Error(error.message);
-    }
-};
-
-// Handle redirect result (use this in the component where the login occurs)
-export const handleRedirectResult = async () => {
-    const auth = getAuth();
-    try {
-        const result = await getRedirectResult(auth); // Get the result of the redirect
-
-        if (result) {
-            const user = result.user;
-            return user; // Return the user object after a successful login
-        }
-    } catch (error: any) {
-        console.error("Error during sign-in redirect:", error.message);
     }
 };
 
