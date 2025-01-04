@@ -4,7 +4,7 @@ import { AppDispatch, RootState } from '../redux/store';
 import { logout } from '../services/firebaseConfig';
 import { logoutAction } from '../features/auth/authSlice';
 import { useNavigate } from 'react-router-dom';
-import { clearUser, fetchUserData } from '../features/auth/userSlice';
+import { clearUser } from '../features/auth/userSlice';
 import Cookies from 'js-cookie';
 
 const Dashboard = () => {
