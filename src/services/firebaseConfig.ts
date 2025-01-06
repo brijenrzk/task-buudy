@@ -3,6 +3,7 @@ import { initializeApp } from "firebase/app";
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 import { getAuth, GoogleAuthProvider, signOut, signInWithPopup, } from "firebase/auth";
+import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -46,4 +47,24 @@ export const logout = async () => {
     } catch (error: any) {
         throw new Error(error.message);
     }
+};
+
+
+const storage = getStorage(app);
+
+export const uploadFileToFirebase = async (file: File): Promise<string> => {
+    const storageRef = ref(storage, `tasks/${file.name}`);
+    const uploadTask = uploadBytesResumable(storageRef, file);
+
+    return new Promise((resolve, reject) => {
+        uploadTask.on(
+            'state_changed',
+            () => { },
+            (error) => reject(error),
+            async () => {
+                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                resolve(downloadURL);
+            }
+        );
+    });
 };
