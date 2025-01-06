@@ -44,7 +44,7 @@ export const fetchTasksFromFirestore = createAsyncThunk(
                 title: data.title,
                 description: data.description,
                 category: data.category,
-                dueDate: data.dueDate?.toDate ? data.dueDate.toDate().toISOString() : '', // Safely handle dueDate
+                dueDate: data.dueDate, // Safely handle dueDate
                 taskStatus: data.taskStatus,
                 fileUrl: data.fileUrl,
                 userId: data.userId,
@@ -77,6 +77,22 @@ export const updateTaskStatusInFirestore = createAsyncThunk(
             const taskRef = doc(db, 'tasks', id);
             await updateDoc(taskRef, { taskStatus });
             return { id, taskStatus };
+        } catch (error: any) {
+            return rejectWithValue(error.message);
+        }
+    }
+);
+
+// Update Bulk Task Status in Firestore
+export const updateBulkTaskStatusInFirestore = createAsyncThunk(
+    'tasks/updateBulkTaskStatusInFirestore',
+    async ({ ids, taskStatus }: { ids: string[], taskStatus: string }, { rejectWithValue }) => {
+        try {
+            await Promise.all(ids.map(async (id) => {
+                const taskRef = doc(db, 'tasks', id);
+                await updateDoc(taskRef, { taskStatus });
+            }));
+            return { ids, taskStatus };
         } catch (error: any) {
             return rejectWithValue(error.message);
         }
@@ -146,6 +162,25 @@ const tasksSlice = createSlice({
                 }
             })
             .addCase(updateTaskStatusInFirestore.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload as string;
+            })
+            //Update Bulk Task
+            .addCase(updateBulkTaskStatusInFirestore.pending, (state) => {
+                state.loading = true;
+            })
+            .addCase(updateBulkTaskStatusInFirestore.fulfilled, (state, action) => {
+                state.loading = false;
+                const { ids, taskStatus } = action.payload;
+
+                state.tasks = state.tasks.map((task) => {
+                    if (task.id && ids.includes(task.id)) {
+                        return { ...task, taskStatus: taskStatus };
+                    }
+                    return task;
+                });
+            })
+            .addCase(updateBulkTaskStatusInFirestore.rejected, (state, action) => {
                 state.loading = false;
                 state.error = action.payload as string;
             })

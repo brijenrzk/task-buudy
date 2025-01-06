@@ -15,7 +15,7 @@ import { IoIosCheckmarkCircle } from "react-icons/io";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/redux/store";
 import { useEffect, useRef, useState } from "react";
-import { deleteTasksFromFirestore, fetchTasksFromFirestore, updateTaskStatusInFirestore } from "@/features/task/taskSlice";
+import { deleteTasksFromFirestore, fetchTasksFromFirestore, updateBulkTaskStatusInFirestore, updateTaskStatusInFirestore } from "@/features/task/taskSlice";
 import {
     Select,
     SelectContent,
@@ -28,12 +28,13 @@ import { Button } from "./ui/button";
 interface TaskViewProps {
     searchQuery: string;
     selectedCategory: string;
+    selectedDate: any;
 }
 
 
 
 
-const TaskView: React.FC<TaskViewProps> = ({ searchQuery, selectedCategory }) => {
+const TaskView: React.FC<TaskViewProps> = ({ searchQuery, selectedCategory, selectedDate }) => {
     const dispatch = useDispatch<AppDispatch>();
     const { tasks, loading } = useSelector((state: RootState) => state.task);
     const userCookie = Cookies.get('user')
@@ -44,12 +45,17 @@ const TaskView: React.FC<TaskViewProps> = ({ searchQuery, selectedCategory }) =>
     // Filter tasks based on the search query
     const filteredTasks = tasks.filter((task) => {
         const matchesSearchQuery = task.title.toLowerCase().includes(searchQuery)
+        let dateFrom = new Date(selectedDate.from)
+        let dateTo = new Date(selectedDate.to)
         const matchesCategory = selectedCategory === "all" || task.category === selectedCategory;
-        return matchesCategory && matchesSearchQuery
+        let dateDue = new Date(task.dueDate)
+        const matchesDate = dateDue >= dateFrom && dateDue <= dateTo
+        return matchesSearchQuery && matchesCategory && matchesDate
 
 
     }
     );
+    console.log(filteredTasks)
 
     useEffect(() => {
         if (userCookie) {
@@ -64,7 +70,7 @@ const TaskView: React.FC<TaskViewProps> = ({ searchQuery, selectedCategory }) =>
         setTodoTasks(filteredTasks.filter((task) => task.taskStatus === 'todo'))
         setInProgressTasks(filteredTasks.filter((task) => task.taskStatus === 'progress'))
         setCompletedTasks(filteredTasks.filter((task) => task.taskStatus === 'completed'))
-    }, [searchQuery, selectedCategory])
+    }, [searchQuery, selectedCategory, selectedDate])
 
 
     useEffect(() => {
@@ -143,6 +149,13 @@ const TaskView: React.FC<TaskViewProps> = ({ searchQuery, selectedCategory }) =>
 
     }
 
+    const handleUpdateTaskStatus = (e: any) => {
+        console.log(e)
+        if (selectedTasks) {
+            dispatch(updateBulkTaskStatusInFirestore({ ids: selectedTasks, taskStatus: e }));
+            setSelectedTasks([])
+        }
+    }
     return (
         <div className='px-8 flex flex-col gap-5 mt-5'>
             <Accordion type="single" collapsible defaultValue='item-1'>
@@ -207,22 +220,22 @@ const TaskView: React.FC<TaskViewProps> = ({ searchQuery, selectedCategory }) =>
             </Accordion>
 
             {selectedTasks.length > 0 &&
-                <div className="absolute flex bottom-8 h-20 w-[80%] bg-[#1A1C20] left-[50%] translate-x-[-50%] rounded-xl shadow-md px-4 items-center justify-between">
+                <div className="absolute flex bottom-8 h-20 w-[90%] bg-[#1A1C20] left-[50%] translate-x-[-50%] rounded-xl shadow-md px-4 items-center justify-between">
                     <div className="border border-white w-[35%] h-10 rounded-full flex items-center justify-center">
-                        <p className="text-white font-bold">{selectedTasks.length} Tasks Selected</p>
+                        <p className="text-white font-bold text-[0.6em]">{selectedTasks.length} Tasks Selected</p>
                     </div>
-                    <div className="flex gap-2">
-                        <Select>
-                            <SelectTrigger className="w-[130px]  shadow-none text-white rounded-full">
+                    <div className="flex gap-2 justify-end w-[65%]">
+                        <Select onValueChange={(e) => handleUpdateTaskStatus(e)}>
+                            <SelectTrigger className="w-[45%]  shadow-none text-white rounded-full">
                                 <SelectValue placeholder="Status" />
                             </SelectTrigger>
                             <SelectContent side="top">
                                 <SelectItem value="todo">TODO</SelectItem>
                                 <SelectItem value="progress">IN-PROGRESS</SelectItem>
-                                <SelectItem value="done">DONE</SelectItem>
+                                <SelectItem value="completed">DONE</SelectItem>
                             </SelectContent>
                         </Select>
-                        <Button className="w-[130px] border border-[#E13838] rounded-full text-[#E13838] bg-[#e1383834]" onClick={handleBulkDelete}>
+                        <Button className="w-[45%] border border-[#E13838] rounded-full text-[#E13838] bg-[#e1383834]" onClick={handleBulkDelete}>
                             Delete
                         </Button>
                     </div>

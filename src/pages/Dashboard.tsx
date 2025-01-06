@@ -17,12 +17,12 @@ const Dashboard = () => {
     const status = useSelector((state: RootState) => state.user.status);
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedCategory, setSelectedCategory] = useState<string>("all");
+    const [selectedDate, setSelectedDate] = useState<any>();
 
 
     const handleSearch = (query: string) => {
         setSearchQuery(query.toLowerCase()); // Normalize for case-insensitive matching
     };
-
 
 
     useEffect(() => {
@@ -46,8 +46,9 @@ const Dashboard = () => {
                         onSearch={handleSearch}
                         selectedCategory={selectedCategory}
                         onCategoryChange={setSelectedCategory}
+                        onDateChange={setSelectedDate}
                     />
-                    <TaskView searchQuery={searchQuery} selectedCategory={selectedCategory} />
+                    <TaskView searchQuery={searchQuery} selectedCategory={selectedCategory} selectedDate={selectedDate} />
 
                 </div>
             ) : (<p>sign in to dashboard</p>)}

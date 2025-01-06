@@ -10,6 +10,17 @@ import { Label } from '@/components/ui/label';
 import { Input } from './ui/input';
 import { Search01Icon } from 'hugeicons-react';
 import { useEffect, useState } from 'react';
+import { DateRange } from "react-day-picker"
+import { format } from "date-fns"
+import { Button } from "@/components/ui/button"
+import { Calendar } from "@/components/ui/calendar"
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover"
+import { cn } from '@/lib/utils';
+import { Calendar1Icon } from 'lucide-react';
 
 
 
@@ -17,22 +28,32 @@ interface HeaderProps {
     onSearch: (query: string) => void;
     selectedCategory: string;
     onCategoryChange: (category: string) => void;
+    onDateChange: (date: object) => void;
 }
 
 
-const Header: React.FC<HeaderProps> = ({ onSearch, onCategoryChange }) => {
+const Header: React.FC<HeaderProps> = ({ onSearch, onCategoryChange, onDateChange }) => {
     const [searchQuery, setSearchQuery] = useState("");
     const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const query = event.target.value;
         setSearchQuery(query);
         onSearch(query); // Emit the search query to the parent
     };
+    const [date, setDate] = useState<DateRange | undefined>({
+        from: undefined,
+        to: undefined,
+    })
     const [category, setCategory] = useState('all')
 
     useEffect(() => {
         onCategoryChange(category)
 
     }, [category])
+    useEffect(() => {
+        if (date) {
+            onDateChange(date)
+        }
+    }, [date])
 
 
     return (
@@ -54,15 +75,42 @@ const Header: React.FC<HeaderProps> = ({ onSearch, onCategoryChange }) => {
                             <SelectItem value="personal">Personal</SelectItem>
                         </SelectContent>
                     </Select>
-                    <Select>
-                        <SelectTrigger className="w-[130px] rounded-full">
-                            <SelectValue placeholder="Due Date" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="todo">Work</SelectItem>
-                            <SelectItem value="progress">Personal</SelectItem>
-                        </SelectContent>
-                    </Select>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button
+                                id="date"
+                                variant={"outline"}
+                                className={cn(
+                                    "w-auto rounded-full justify-start text-left font-normal",
+                                    !date && "text-muted-foreground"
+                                )}
+                            >
+                                <Calendar1Icon />
+                                {date?.from ? (
+                                    date.to ? (
+                                        <>
+                                            {format(date.from, "LLL dd, y")} -{" "}
+                                            {format(date.to, "LLL dd, y")}
+                                        </>
+                                    ) : (
+                                        format(date.from, "LLL dd, y")
+                                    )
+                                ) : (
+                                    <span>Due Date</span>
+                                )}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                                initialFocus
+                                mode="range"
+                                defaultMonth={date?.from}
+                                selected={date}
+                                onSelect={setDate}
+                                numberOfMonths={2}
+                            />
+                        </PopoverContent>
+                    </Popover>
                 </div>
 
             </div>
