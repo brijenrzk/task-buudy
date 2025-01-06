@@ -38,7 +38,7 @@ const Dashboard = () => {
         return <div>Loading...</div>; // Optionally show a loading screen
     }
     return (
-        <div className='min-h-screen'>
+        <div>
             {user ? (
                 <div>
                     <Navbar />

@@ -220,7 +220,7 @@ const TaskView: React.FC<TaskViewProps> = ({ searchQuery, selectedCategory, sele
             </Accordion>
 
             {selectedTasks.length > 0 &&
-                <div className="absolute flex bottom-8 h-20 w-[90%] bg-[#1A1C20] left-[50%] translate-x-[-50%] rounded-xl shadow-md px-4 items-center justify-between">
+                <div className="fixed flex bottom-8 h-20 w-[90%] bg-[#1A1C20] left-[50%] translate-x-[-50%] rounded-xl shadow-md px-4 items-center justify-between">
                     <div className="border border-white w-[35%] h-10 rounded-full flex items-center justify-center">
                         <p className="text-white font-bold text-[0.6em]">{selectedTasks.length} Tasks Selected</p>
                     </div>
