@@ -9,12 +9,23 @@ import {
 import { Label } from '@/components/ui/label';
 import { Input } from './ui/input';
 import { Search01Icon } from 'hugeicons-react';
+import { useState } from 'react';
 
 
 
+interface HeaderProps {
+    onSearch: (query: string) => void;
+}
 
 
-const Header = () => {
+const Header: React.FC<HeaderProps> = ({ onSearch }) => {
+    const [searchQuery, setSearchQuery] = useState("");
+    const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const query = event.target.value;
+        setSearchQuery(query);
+        onSearch(query); // Emit the search query to the parent
+    };
+
     return (
         <div className='px-8 mt-8 gap-4 flex flex-col w-full'>
             <div className='flex flex-1 justify-end'>
@@ -48,7 +59,8 @@ const Header = () => {
             <div>
                 <div className='relative flex items-center bg-[#FBFBFB] p-2 rounded-full'>
                     <Search01Icon className='absolute' size={19} color='grey' />
-                    <Input type='search' placeholder='Search' className='border-0 shadow-none focus-visible:ring-0 active:border-none pl-10' />
+                    <Input type='search' placeholder='Search' value={searchQuery}
+                        onChange={handleSearchChange} className='border-0 shadow-none focus-visible:ring-0 active:border-none pl-10' />
                 </div>
             </div>
         </div>

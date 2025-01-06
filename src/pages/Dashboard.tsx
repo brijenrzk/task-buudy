@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
 import { RootState } from '../redux/store';
 
@@ -15,6 +15,12 @@ const Dashboard = () => {
     const navigate = useNavigate();
     const user = useSelector((state: RootState) => state.user.user);
     const status = useSelector((state: RootState) => state.user.status);
+    const [searchQuery, setSearchQuery] = useState("");
+
+    const handleSearch = (query: string) => {
+        setSearchQuery(query.toLowerCase()); // Normalize for case-insensitive matching
+    };
+
 
 
     useEffect(() => {
@@ -33,8 +39,8 @@ const Dashboard = () => {
             {user ? (
                 <div>
                     <Navbar />
-                    <Header />
-                    <TaskView />
+                    <Header onSearch={handleSearch} />
+                    <TaskView searchQuery={searchQuery} />
 
                 </div>
             ) : (<p>sign in to dashboard</p>)}

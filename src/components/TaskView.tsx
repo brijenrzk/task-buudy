@@ -17,17 +17,26 @@ import { AppDispatch, RootState } from "@/redux/store";
 import { useEffect, useRef, useState } from "react";
 import { fetchTasksFromFirestore, updateTaskStatusInFirestore } from "@/features/task/taskSlice";
 import Cookies from 'js-cookie';
+interface TaskViewProps {
+    searchQuery: string;
+}
 
 
 
 
-const TaskView = () => {
+const TaskView: React.FC<TaskViewProps> = ({ searchQuery }) => {
     const dispatch = useDispatch<AppDispatch>();
     const { tasks, loading } = useSelector((state: RootState) => state.task);
     const userCookie = Cookies.get('user')
     const [inProgressTasks, setInProgressTasks] = useState(tasks.filter((task) => task.taskStatus === 'progress'))
     const [todoTasks, setTodoTasks] = useState(tasks.filter((task) => task.taskStatus === 'todo'))
     const [completedTasks, setCompletedTasks] = useState(tasks.filter((task) => task.taskStatus === 'completed'))
+    // Filter tasks based on the search query
+    const filteredTasks = tasks.filter((task) =>
+        task.title.toLowerCase().includes(searchQuery) ||
+        task.description.toLowerCase().includes(searchQuery)
+    );
+
     useEffect(() => {
         if (userCookie) {
             const usr = JSON.parse(userCookie)
@@ -35,6 +44,13 @@ const TaskView = () => {
             dispatch(fetchTasksFromFirestore(userId));
         }
     }, []);
+
+
+    useEffect(() => {
+        setTodoTasks(filteredTasks.filter((task) => task.taskStatus === 'todo'))
+        setInProgressTasks(filteredTasks.filter((task) => task.taskStatus === 'progress'))
+        setCompletedTasks(filteredTasks.filter((task) => task.taskStatus === 'completed'))
+    }, [searchQuery])
 
 
     useEffect(() => {
