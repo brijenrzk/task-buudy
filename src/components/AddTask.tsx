@@ -31,7 +31,6 @@ import { useDispatch } from 'react-redux';
 import { addTaskToFirestore } from '@/features/task/taskSlice';
 import { useAuth } from '@/hooks/useAuth';
 import { AppDispatch } from '@/redux/store';
-import { uploadFileToFirebase } from '@/services/firebaseConfig';
 const AddTask = () => {
     const [dueDate, setDueDate] = useState<Date | undefined>(new Date())
     const dispatch = useDispatch<AppDispatch>();
