@@ -16,6 +16,8 @@ const Dashboard = () => {
     const user = useSelector((state: RootState) => state.user.user);
     const status = useSelector((state: RootState) => state.user.status);
     const [searchQuery, setSearchQuery] = useState("");
+    const [selectedCategory, setSelectedCategory] = useState<string>("all");
+
 
     const handleSearch = (query: string) => {
         setSearchQuery(query.toLowerCase()); // Normalize for case-insensitive matching
@@ -31,16 +33,21 @@ const Dashboard = () => {
 
 
 
+
     if (status === 'loading') {
         return <div>Loading...</div>; // Optionally show a loading screen
     }
     return (
-        <div>
+        <div className='min-h-screen'>
             {user ? (
                 <div>
                     <Navbar />
-                    <Header onSearch={handleSearch} />
-                    <TaskView searchQuery={searchQuery} />
+                    <Header
+                        onSearch={handleSearch}
+                        selectedCategory={selectedCategory}
+                        onCategoryChange={setSelectedCategory}
+                    />
+                    <TaskView searchQuery={searchQuery} selectedCategory={selectedCategory} />
 
                 </div>
             ) : (<p>sign in to dashboard</p>)}

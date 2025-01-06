@@ -144,7 +144,7 @@ const AddTask = () => {
                             <Label className='text-left mt-2 font-normal'>Task Status<sup>*</sup></Label>
                             <Select onValueChange={setTaskStatus}>
                                 <SelectTrigger className="w-[180px]  shadow-none">
-                                    <SelectValue placeholder="Theme" />
+                                    <SelectValue placeholder="Status" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="todo">TODO</SelectItem>

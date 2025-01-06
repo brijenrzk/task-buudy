@@ -38,7 +38,17 @@ export const fetchTasksFromFirestore = createAsyncThunk(
 
         const tasks: Task[] = [];
         querySnapshot.forEach((doc) => {
-            tasks.push({ id: doc.id, ...doc.data() } as Task);
+            const data = doc.data();
+            tasks.push({
+                id: doc.id,
+                title: data.title,
+                description: data.description,
+                category: data.category,
+                dueDate: data.dueDate?.toDate ? data.dueDate.toDate().toISOString() : '', // Safely handle dueDate
+                taskStatus: data.taskStatus,
+                fileUrl: data.fileUrl,
+                userId: data.userId,
+            });
         });
 
         return tasks;
@@ -74,18 +84,24 @@ export const updateTaskStatusInFirestore = createAsyncThunk(
 );
 
 // Delete Task from Firestore
-export const deleteTaskFromFirestore = createAsyncThunk(
-    'tasks/deleteTaskFromFirestore',
-    async (id: string, { rejectWithValue }) => {
+export const deleteTasksFromFirestore = createAsyncThunk(
+    'tasks/deleteTasksFromFirestore',
+    async (ids: string[], { rejectWithValue }) => {
         try {
-            const taskRef = doc(db, 'tasks', id);
-            await deleteDoc(taskRef);
-            return id;
+            // Use Promise.all to delete all tasks in parallel
+            await Promise.all(ids.map(async (id) => {
+                const taskRef = doc(db, 'tasks', id);
+                await deleteDoc(taskRef);
+            }));
+
+            // Return the list of deleted IDs
+            return ids;
         } catch (error: any) {
             return rejectWithValue(error.message);
         }
     }
 );
+
 
 // Create tasks slice
 const tasksSlice = createSlice({
@@ -134,14 +150,14 @@ const tasksSlice = createSlice({
                 state.error = action.payload as string;
             })
             // Delete Task
-            .addCase(deleteTaskFromFirestore.pending, (state) => {
+            .addCase(deleteTasksFromFirestore.pending, (state) => {
                 state.loading = true;
             })
-            .addCase(deleteTaskFromFirestore.fulfilled, (state, action) => {
+            .addCase(deleteTasksFromFirestore.fulfilled, (state, action) => {
                 state.loading = false;
-                state.tasks = state.tasks.filter((task) => task.id !== action.payload);
+                state.tasks = state.tasks.filter((task) => task.id && !action.payload.includes(task.id));
             })
-            .addCase(deleteTaskFromFirestore.rejected, (state, action) => {
+            .addCase(deleteTasksFromFirestore.rejected, (state, action) => {
                 state.loading = false;
                 state.error = action.payload as string;
             });

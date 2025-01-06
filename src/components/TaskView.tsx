@@ -15,26 +15,40 @@ import { IoIosCheckmarkCircle } from "react-icons/io";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/redux/store";
 import { useEffect, useRef, useState } from "react";
-import { fetchTasksFromFirestore, updateTaskStatusInFirestore } from "@/features/task/taskSlice";
+import { deleteTasksFromFirestore, fetchTasksFromFirestore, updateTaskStatusInFirestore } from "@/features/task/taskSlice";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
 import Cookies from 'js-cookie';
+import { Button } from "./ui/button";
 interface TaskViewProps {
     searchQuery: string;
+    selectedCategory: string;
 }
 
 
 
 
-const TaskView: React.FC<TaskViewProps> = ({ searchQuery }) => {
+const TaskView: React.FC<TaskViewProps> = ({ searchQuery, selectedCategory }) => {
     const dispatch = useDispatch<AppDispatch>();
     const { tasks, loading } = useSelector((state: RootState) => state.task);
     const userCookie = Cookies.get('user')
     const [inProgressTasks, setInProgressTasks] = useState(tasks.filter((task) => task.taskStatus === 'progress'))
     const [todoTasks, setTodoTasks] = useState(tasks.filter((task) => task.taskStatus === 'todo'))
     const [completedTasks, setCompletedTasks] = useState(tasks.filter((task) => task.taskStatus === 'completed'))
+    const [selectedTasks, setSelectedTasks] = useState<(string)[]>([])
     // Filter tasks based on the search query
-    const filteredTasks = tasks.filter((task) =>
-        task.title.toLowerCase().includes(searchQuery) ||
-        task.description.toLowerCase().includes(searchQuery)
+    const filteredTasks = tasks.filter((task) => {
+        const matchesSearchQuery = task.title.toLowerCase().includes(searchQuery)
+        const matchesCategory = selectedCategory === "all" || task.category === selectedCategory;
+        return matchesCategory && matchesSearchQuery
+
+
+    }
     );
 
     useEffect(() => {
@@ -50,7 +64,7 @@ const TaskView: React.FC<TaskViewProps> = ({ searchQuery }) => {
         setTodoTasks(filteredTasks.filter((task) => task.taskStatus === 'todo'))
         setInProgressTasks(filteredTasks.filter((task) => task.taskStatus === 'progress'))
         setCompletedTasks(filteredTasks.filter((task) => task.taskStatus === 'completed'))
-    }, [searchQuery])
+    }, [searchQuery, selectedCategory])
 
 
     useEffect(() => {
@@ -111,17 +125,35 @@ const TaskView: React.FC<TaskViewProps> = ({ searchQuery }) => {
     const handleOnDragOver = (e: any) => {
         e.preventDefault();
     }
+
+    const handleSelectTask = (e: any, taskId: string | undefined) => {
+        if (e === true && taskId) {
+            setSelectedTasks((prev) => [...prev, taskId])
+        } else {
+            let newSelectedTask = selectedTasks.filter((task) => task != taskId)
+            setSelectedTasks(newSelectedTask)
+        }
+    }
+
+    const handleBulkDelete = () => {
+        if (selectedTasks) {
+            dispatch(deleteTasksFromFirestore(selectedTasks));
+            setSelectedTasks([])
+        }
+
+    }
+
     return (
         <div className='px-8 flex flex-col gap-5 mt-5'>
             <Accordion type="single" collapsible defaultValue='item-1'>
                 <AccordionItem value="item-1" className='border-none'>
-                    <AccordionTrigger className='bg-[#FAC3FF] rounded-t-2xl px-4 font-bold'>Todo (3)</AccordionTrigger>
+                    <AccordionTrigger className='bg-[#FAC3FF] rounded-t-2xl px-4 font-bold'>Todo ({todoTasks.length})</AccordionTrigger>
                     <AccordionContent onDrop={() => handleOnDrop("todo")} onDragOver={(e) => handleOnDragOver(e)}>
                         <Table className='bg-gray-100 rounded-b-2xl'>
                             <TableBody >
                                 {todoTasks.map((task) => (
                                     <TableRow className='h-16' key={task.id} draggable onDragStart={(e) => handleOnDrag(e, task.id, task.taskStatus)} onDragEnd={(e) => handleDragEnd(e)}>
-                                        <TableCell className='pl-4'><Checkbox className='data-[state=checked]:bg-[#7B1984] data-[state=checked]:border-0' /></TableCell>
+                                        <TableCell className='pl-4'><Checkbox className='data-[state=checked]:bg-[#7B1984] data-[state=checked]:border-0' onCheckedChange={(e) => handleSelectTask(e, task.id)} /></TableCell>
                                         <TableCell><IoIosCheckmarkCircle size={20} className='text-gray-400' /></TableCell>
                                         <TableCell>{task.title}</TableCell>
                                     </TableRow>
@@ -135,13 +167,13 @@ const TaskView: React.FC<TaskViewProps> = ({ searchQuery }) => {
             </Accordion>
             <Accordion type="single" collapsible defaultValue='item-1'>
                 <AccordionItem value="item-1" className='border-none'>
-                    <AccordionTrigger className='bg-[#85D9F1] rounded-t-2xl px-4 font-bold'>In-Progress (3)</AccordionTrigger>
+                    <AccordionTrigger className='bg-[#85D9F1] rounded-t-2xl px-4 font-bold'>In-Progress ({inProgressTasks.length})</AccordionTrigger>
                     <AccordionContent onDrop={() => handleOnDrop("progress")} onDragOver={(e) => handleOnDragOver(e)}>
                         <Table className='bg-gray-100 rounded-b-2xl'>
                             <TableBody >
                                 {inProgressTasks.map((task) => (
-                                    <TableRow className='h-16' key={task.id} draggable onDragStart={(e) => handleOnDrag(e, task.id, task.taskStatus)} onDragEnd={(e) => handleDragEnd(e)}>
-                                        <TableCell className='pl-4'><Checkbox className='data-[state=checked]:bg-[#7B1984] data-[state=checked]:border-0' /></TableCell>
+                                    <TableRow className='h-16 cursor-move' key={task.id} draggable onDragStart={(e) => handleOnDrag(e, task.id, task.taskStatus)} onDragEnd={(e) => handleDragEnd(e)}>
+                                        <TableCell className='pl-4'><Checkbox className='data-[state=checked]:bg-[#7B1984] data-[state=checked]:border-0' onCheckedChange={(e) => handleSelectTask(e, task.id)} /></TableCell>
                                         <TableCell><IoIosCheckmarkCircle size={20} className='text-gray-400' /></TableCell>
                                         <TableCell>{task.title}</TableCell>
                                     </TableRow>
@@ -154,13 +186,13 @@ const TaskView: React.FC<TaskViewProps> = ({ searchQuery }) => {
             </Accordion>
             <Accordion type="single" collapsible defaultValue='item-1'>
                 <AccordionItem value="item-1" className='border-none'>
-                    <AccordionTrigger className='bg-[#CEFFCC] rounded-t-2xl px-4 font-bold'>Completed (3)</AccordionTrigger>
+                    <AccordionTrigger className='bg-[#CEFFCC] rounded-t-2xl px-4 font-bold'>Completed ({completedTasks.length})</AccordionTrigger>
                     <AccordionContent onDrop={() => handleOnDrop("completed")} onDragOver={(e) => handleOnDragOver(e)}>
                         <Table className='bg-gray-100 rounded-b-2xl'>
                             <TableBody >
                                 {completedTasks.map((task) => (
                                     <TableRow className='h-16' key={task.id} draggable onDragStart={(e) => handleOnDrag(e, task.id, task.taskStatus)} onDragEnd={(e) => handleDragEnd(e)}>
-                                        <TableCell className='pl-4'><Checkbox className='data-[state=checked]:bg-[#7B1984] data-[state=checked]:border-0' /></TableCell>
+                                        <TableCell className='pl-4'><Checkbox className='data-[state=checked]:bg-[#7B1984] data-[state=checked]:border-0' onCheckedChange={(e) => handleSelectTask(e, task.id)} /></TableCell>
                                         <TableCell><IoIosCheckmarkCircle size={20} className='text-[#1B8D17]' /></TableCell>
                                         <TableCell>{task.title}</TableCell>
                                     </TableRow>
@@ -173,6 +205,32 @@ const TaskView: React.FC<TaskViewProps> = ({ searchQuery }) => {
                     </AccordionContent>
                 </AccordionItem>
             </Accordion>
+
+            {selectedTasks.length > 0 &&
+                <div className="absolute flex bottom-8 h-20 w-[80%] bg-[#1A1C20] left-[50%] translate-x-[-50%] rounded-xl shadow-md px-4 items-center justify-between">
+                    <div className="border border-white w-[35%] h-10 rounded-full flex items-center justify-center">
+                        <p className="text-white font-bold">{selectedTasks.length} Tasks Selected</p>
+                    </div>
+                    <div className="flex gap-2">
+                        <Select>
+                            <SelectTrigger className="w-[130px]  shadow-none text-white rounded-full">
+                                <SelectValue placeholder="Status" />
+                            </SelectTrigger>
+                            <SelectContent side="top">
+                                <SelectItem value="todo">TODO</SelectItem>
+                                <SelectItem value="progress">IN-PROGRESS</SelectItem>
+                                <SelectItem value="done">DONE</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <Button className="w-[130px] border border-[#E13838] rounded-full text-[#E13838] bg-[#e1383834]" onClick={handleBulkDelete}>
+                            Delete
+                        </Button>
+                    </div>
+
+                </div>
+            }
+
+
 
         </div>
     )
