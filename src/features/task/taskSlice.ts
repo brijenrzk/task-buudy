@@ -13,18 +13,21 @@ interface Task {
     taskStatus: string;
     fileUrl: string;
     userId: string;
+    taskHistory: Array<Object>;
 }
 
 interface TasksState {
     tasks: Task[];
     loading: boolean;
     error: string | null;
+    viewTaskModal: boolean;
 }
 
 const initialState: TasksState = {
     tasks: [],
     loading: false,
     error: null,
+    viewTaskModal: false
 };
 
 
@@ -48,6 +51,7 @@ export const fetchTasksFromFirestore = createAsyncThunk(
                 taskStatus: data.taskStatus,
                 fileUrl: data.fileUrl,
                 userId: data.userId,
+                taskHistory: data.taskHistory
             });
         });
 
@@ -69,13 +73,35 @@ export const addTaskToFirestore = createAsyncThunk(
     }
 );
 
+// Update Task to Firestore
+export const updateTaskToFirestore = createAsyncThunk(
+    'tasks/updateTaskToFirestore',
+    async ({ id, taskData }: { id: string, taskData: Task }, { rejectWithValue }) => {
+        try {
+            const taskRef = doc(db, 'tasks', id);
+            await updateDoc(taskRef, {
+                title: taskData.title,
+                description: taskData.description,
+                category: taskData.category,
+                dueDate: taskData.dueDate,
+                taskStatus: taskData.taskStatus,
+                fileUrl: taskData.fileUrl,
+                taskHistory: taskData.taskHistory
+            })
+            return { id, taskData };
+        } catch (error: any) {
+            return rejectWithValue(error.message);
+        }
+    }
+);
+
 // Update Task Status in Firestore
 export const updateTaskStatusInFirestore = createAsyncThunk(
     'tasks/updateTaskStatusInFirestore',
-    async ({ id, taskStatus }: { id: string, taskStatus: string }, { rejectWithValue }) => {
+    async ({ id, taskStatus, taskHistory }: { id: string, taskStatus: string, taskHistory: Array<Object> }, { rejectWithValue }) => {
         try {
             const taskRef = doc(db, 'tasks', id);
-            await updateDoc(taskRef, { taskStatus });
+            await updateDoc(taskRef, { taskStatus, taskHistory });
             return { id, taskStatus };
         } catch (error: any) {
             return rejectWithValue(error.message);
@@ -86,12 +112,17 @@ export const updateTaskStatusInFirestore = createAsyncThunk(
 // Update Bulk Task Status in Firestore
 export const updateBulkTaskStatusInFirestore = createAsyncThunk(
     'tasks/updateBulkTaskStatusInFirestore',
-    async ({ ids, taskStatus }: { ids: string[], taskStatus: string }, { rejectWithValue }) => {
+    async ({ selectedTasks, taskStatus }: { selectedTasks: Task[], taskStatus: string }, { rejectWithValue }) => {
         try {
-            await Promise.all(ids.map(async (id) => {
-                const taskRef = doc(db, 'tasks', id);
-                await updateDoc(taskRef, { taskStatus });
+            await Promise.all(selectedTasks.map(async (task) => {
+                if (task.id) {
+                    const taskRef = doc(db, 'tasks', task.id);
+                    const currentDate = new Date().toISOString()
+                    const updatedHistory = [...task.taskHistory, { activity: `You Change the type status from ${task.taskStatus} to ${taskStatus}`, timestamp: currentDate }]
+                    await updateDoc(taskRef, { taskStatus, taskHistory: updatedHistory });
+                }
             }));
+            const ids = selectedTasks.map((task) => task.id)
             return { ids, taskStatus };
         } catch (error: any) {
             return rejectWithValue(error.message);
@@ -125,6 +156,9 @@ const tasksSlice = createSlice({
     initialState,
     reducers: {
         // You can add additional actions here like updating a task in local state
+        modalAction: (state, action: PayloadAction<any>) => {
+            state.viewTaskModal = action.payload
+        }
     },
     extraReducers: (builder) => {
         builder
@@ -147,6 +181,19 @@ const tasksSlice = createSlice({
                 state.tasks.push(action.payload);
             })
             .addCase(addTaskToFirestore.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload as string;
+            })
+            //Update Task to Firestore
+            .addCase(updateTaskToFirestore.pending, (state) => {
+                state.loading = true;
+            })
+            .addCase(updateTaskToFirestore.fulfilled, (state, action) => {
+                state.loading = false;
+                const index = state.tasks.findIndex((task) => task.id === action.payload.id);
+                state.tasks[index] = action.payload.taskData;
+            })
+            .addCase(updateTaskToFirestore.rejected, (state, action) => {
                 state.loading = false;
                 state.error = action.payload as string;
             })
@@ -198,5 +245,6 @@ const tasksSlice = createSlice({
             });
     }
 });
+export const { modalAction } = tasksSlice.actions;
 
 export default tasksSlice.reducer;

@@ -15,7 +15,7 @@ import { IoIosCheckmarkCircle } from "react-icons/io";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/redux/store";
 import { useEffect, useRef, useState } from "react";
-import { deleteTasksFromFirestore, fetchTasksFromFirestore, updateBulkTaskStatusInFirestore, updateTaskStatusInFirestore } from "@/features/task/taskSlice";
+import { deleteTasksFromFirestore, fetchTasksFromFirestore, modalAction, updateBulkTaskStatusInFirestore, updateTaskStatusInFirestore } from "@/features/task/taskSlice";
 import {
     Select,
     SelectContent,
@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/select"
 import Cookies from 'js-cookie';
 import { Button } from "./ui/button";
+import ViewTask from "./ViewTask";
 interface TaskViewProps {
     searchQuery: string;
     selectedCategory: string;
@@ -36,14 +37,16 @@ interface TaskViewProps {
 
 const TaskView: React.FC<TaskViewProps> = ({ searchQuery, selectedCategory, selectedDate }) => {
     const dispatch = useDispatch<AppDispatch>();
-    const { tasks, loading } = useSelector((state: RootState) => state.task);
+    const { tasks, loading }: { tasks: any, loading: boolean } = useSelector((state: RootState) => state.task);
     const userCookie = Cookies.get('user')
-    const [inProgressTasks, setInProgressTasks] = useState(tasks.filter((task) => task.taskStatus === 'progress'))
-    const [todoTasks, setTodoTasks] = useState(tasks.filter((task) => task.taskStatus === 'todo'))
-    const [completedTasks, setCompletedTasks] = useState(tasks.filter((task) => task.taskStatus === 'completed'))
-    const [selectedTasks, setSelectedTasks] = useState<(string)[]>([])
+    const [inProgressTasks, setInProgressTasks] = useState(tasks.filter((task: any) => task.taskStatus === 'progress'))
+    const [todoTasks, setTodoTasks] = useState(tasks.filter((task: any) => task.taskStatus === 'todo'))
+    const [completedTasks, setCompletedTasks] = useState(tasks.filter((task: any) => task.taskStatus === 'completed'))
+    const [selectedTasks, setSelectedTasks] = useState<(any)[]>([])
+    const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
+    const [selectedTask, setSelectedTask] = useState<any>(null);
     // Filter tasks based on the search query
-    const filteredTasks = tasks.filter((task) => {
+    const filteredTasks = tasks.filter((task: any) => {
         const matchesSearchQuery = task.title.toLowerCase().includes(searchQuery)
         let dateFrom = new Date(selectedDate.from)
         let dateTo = new Date(selectedDate.to)
@@ -55,7 +58,6 @@ const TaskView: React.FC<TaskViewProps> = ({ searchQuery, selectedCategory, sele
 
     }
     );
-    console.log(filteredTasks)
 
     useEffect(() => {
         if (userCookie) {
@@ -67,17 +69,17 @@ const TaskView: React.FC<TaskViewProps> = ({ searchQuery, selectedCategory, sele
 
 
     useEffect(() => {
-        setTodoTasks(filteredTasks.filter((task) => task.taskStatus === 'todo'))
-        setInProgressTasks(filteredTasks.filter((task) => task.taskStatus === 'progress'))
-        setCompletedTasks(filteredTasks.filter((task) => task.taskStatus === 'completed'))
+        setTodoTasks(filteredTasks.filter((task: any) => task.taskStatus === 'todo'))
+        setInProgressTasks(filteredTasks.filter((task: any) => task.taskStatus === 'progress'))
+        setCompletedTasks(filteredTasks.filter((task: any) => task.taskStatus === 'completed'))
     }, [searchQuery, selectedCategory, selectedDate])
 
 
     useEffect(() => {
         if (!loading) {
-            setTodoTasks(tasks.filter((task) => task.taskStatus === 'todo'))
-            setInProgressTasks(tasks.filter((task) => task.taskStatus === 'progress'))
-            setCompletedTasks(tasks.filter((task) => task.taskStatus === 'completed'))
+            setTodoTasks(tasks.filter((task: any) => task.taskStatus === 'todo'))
+            setInProgressTasks(tasks.filter((task: any) => task.taskStatus === 'progress'))
+            setCompletedTasks(tasks.filter((task: any) => task.taskStatus === 'completed'))
         }
 
     }, [loading])
@@ -100,41 +102,43 @@ const TaskView: React.FC<TaskViewProps> = ({ searchQuery, selectedCategory, sele
         switch (container) {
             case 'todo':
 
-                setTodoTasks((prev) => [...prev, currentTask])
+                setTodoTasks((prev: any) => [...prev, currentTask])
                 break;
             case 'progress':
-                setInProgressTasks((prev) => [...prev, currentTask])
+                setInProgressTasks((prev: any) => [...prev, currentTask])
                 break;
             case 'completed':
-                setCompletedTasks((prev) => [...prev, currentTask])
+                setCompletedTasks((prev: any) => [...prev, currentTask])
         }
         if (sourceContainer) {
             switch (sourceContainer) {
                 case 'todo':
-                    setTodoTasks(todoTasks.filter((task) => task.id != taskRef.current))
+                    setTodoTasks(todoTasks.filter((task: any) => task.id != taskRef.current))
                     break;
                 case 'progress':
-                    setInProgressTasks(inProgressTasks.filter((task) => task.id != taskRef.current))
+                    setInProgressTasks(inProgressTasks.filter((task: any) => task.id != taskRef.current))
                     break;
                 case 'completed':
                     console.log(taskRef.current)
-                    setCompletedTasks(completedTasks.filter((task) => task.id != taskRef.current))
+                    setCompletedTasks(completedTasks.filter((task: any) => task.id != taskRef.current))
                     break;
             }
         }
 
-        let currentTask: any = tasks.find((task) => task.id == taskRef.current)
+        let currentTask: any = tasks.find((task: any) => task.id == taskRef.current)
         if (taskRef.current) {
-            dispatch(updateTaskStatusInFirestore({ id: taskRef.current, taskStatus: container }))
+            const currentDate = new Date().toISOString()
+            let updatedHistory = [...currentTask.taskHistory, { activity: `You Change the type status from ${taskContainer.current} to ${container}`, timestamp: currentDate }]
+            dispatch(updateTaskStatusInFirestore({ id: taskRef.current, taskStatus: container, taskHistory: updatedHistory }))
         }
     }
     const handleOnDragOver = (e: any) => {
         e.preventDefault();
     }
 
-    const handleSelectTask = (e: any, taskId: string | undefined) => {
+    const handleSelectTask = (e: any, task: any, taskId: string | undefined) => {
         if (e === true && taskId) {
-            setSelectedTasks((prev) => [...prev, taskId])
+            setSelectedTasks((prev) => [...prev, task])
         } else {
             let newSelectedTask = selectedTasks.filter((task) => task != taskId)
             setSelectedTasks(newSelectedTask)
@@ -152,9 +156,14 @@ const TaskView: React.FC<TaskViewProps> = ({ searchQuery, selectedCategory, sele
     const handleUpdateTaskStatus = (e: any) => {
         console.log(e)
         if (selectedTasks) {
-            dispatch(updateBulkTaskStatusInFirestore({ ids: selectedTasks, taskStatus: e }));
+            dispatch(updateBulkTaskStatusInFirestore({ selectedTasks: selectedTasks, taskStatus: e }));
             setSelectedTasks([])
         }
+    }
+    const handleModalOpen = (task: any) => {
+        setSelectedTask(task);
+        dispatch(modalAction(true))
+        setIsModalOpen(true)
     }
     return (
         <div className='px-8 flex flex-col gap-5 mt-5'>
@@ -164,11 +173,14 @@ const TaskView: React.FC<TaskViewProps> = ({ searchQuery, selectedCategory, sele
                     <AccordionContent onDrop={() => handleOnDrop("todo")} onDragOver={(e) => handleOnDragOver(e)}>
                         <Table className='bg-gray-100 rounded-b-2xl'>
                             <TableBody >
-                                {todoTasks.map((task) => (
-                                    <TableRow className='h-16' key={task.id} draggable onDragStart={(e) => handleOnDrag(e, task.id, task.taskStatus)} onDragEnd={(e) => handleDragEnd(e)}>
-                                        <TableCell className='pl-4'><Checkbox className='data-[state=checked]:bg-[#7B1984] data-[state=checked]:border-0' onCheckedChange={(e) => handleSelectTask(e, task.id)} /></TableCell>
-                                        <TableCell><IoIosCheckmarkCircle size={20} className='text-gray-400' /></TableCell>
-                                        <TableCell>{task.title}</TableCell>
+                                {todoTasks.map((task: any) => (
+                                    <TableRow className='h-16 items-center' key={task.id} draggable onDragStart={(e) => handleOnDrag(e, task.id, task.taskStatus)} onDragEnd={(e) => handleDragEnd(e)}>
+                                        <TableCell className='pl-4'><Checkbox className='data-[state=checked]:bg-[#7B1984] data-[state=checked]:border-0' onCheckedChange={(e) => handleSelectTask(e, task, task.id)} /></TableCell>
+                                        <div onClick={() => handleModalOpen(task)} className="flex items-center h-16">
+                                            <TableCell><IoIosCheckmarkCircle size={20} className='text-gray-400' /></TableCell>
+                                            <TableCell>{task.title}</TableCell>
+                                        </div>
+
                                     </TableRow>
                                 ))}
 
@@ -184,11 +196,13 @@ const TaskView: React.FC<TaskViewProps> = ({ searchQuery, selectedCategory, sele
                     <AccordionContent onDrop={() => handleOnDrop("progress")} onDragOver={(e) => handleOnDragOver(e)}>
                         <Table className='bg-gray-100 rounded-b-2xl'>
                             <TableBody >
-                                {inProgressTasks.map((task) => (
+                                {inProgressTasks.map((task: any) => (
                                     <TableRow className='h-16 cursor-move' key={task.id} draggable onDragStart={(e) => handleOnDrag(e, task.id, task.taskStatus)} onDragEnd={(e) => handleDragEnd(e)}>
-                                        <TableCell className='pl-4'><Checkbox className='data-[state=checked]:bg-[#7B1984] data-[state=checked]:border-0' onCheckedChange={(e) => handleSelectTask(e, task.id)} /></TableCell>
-                                        <TableCell><IoIosCheckmarkCircle size={20} className='text-gray-400' /></TableCell>
-                                        <TableCell>{task.title}</TableCell>
+                                        <TableCell className='pl-4'><Checkbox className='data-[state=checked]:bg-[#7B1984] data-[state=checked]:border-0' onCheckedChange={(e) => handleSelectTask(e, task, task.id)} /></TableCell>
+                                        <div onClick={() => handleModalOpen(task)} className="flex items-center h-16">
+                                            <TableCell><IoIosCheckmarkCircle size={20} className='text-gray-400' /></TableCell>
+                                            <TableCell>{task.title}</TableCell>
+                                        </div>
                                     </TableRow>
                                 ))}
 
@@ -203,11 +217,13 @@ const TaskView: React.FC<TaskViewProps> = ({ searchQuery, selectedCategory, sele
                     <AccordionContent onDrop={() => handleOnDrop("completed")} onDragOver={(e) => handleOnDragOver(e)}>
                         <Table className='bg-gray-100 rounded-b-2xl'>
                             <TableBody >
-                                {completedTasks.map((task) => (
+                                {completedTasks.map((task: any) => (
                                     <TableRow className='h-16' key={task.id} draggable onDragStart={(e) => handleOnDrag(e, task.id, task.taskStatus)} onDragEnd={(e) => handleDragEnd(e)}>
-                                        <TableCell className='pl-4'><Checkbox className='data-[state=checked]:bg-[#7B1984] data-[state=checked]:border-0' onCheckedChange={(e) => handleSelectTask(e, task.id)} /></TableCell>
-                                        <TableCell><IoIosCheckmarkCircle size={20} className='text-[#1B8D17]' /></TableCell>
-                                        <TableCell>{task.title}</TableCell>
+                                        <TableCell className='pl-4'><Checkbox className='data-[state=checked]:bg-[#7B1984] data-[state=checked]:border-0' onCheckedChange={(e) => handleSelectTask(e, task, task.id)} /></TableCell>
+                                        <div onClick={() => handleModalOpen(task)} className="flex items-center h-16">
+                                            <TableCell><IoIosCheckmarkCircle size={20} className='text-[#1B8D17]' /></TableCell>
+                                            <TableCell>{task.title}</TableCell>
+                                        </div>
                                     </TableRow>
                                 )
 
@@ -242,7 +258,9 @@ const TaskView: React.FC<TaskViewProps> = ({ searchQuery, selectedCategory, sele
 
                 </div>
             }
-
+            {isModalOpen && selectedTask && (
+                <ViewTask task={selectedTask} />
+            )}
 
 
         </div>

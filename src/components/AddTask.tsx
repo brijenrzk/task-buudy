@@ -65,6 +65,7 @@ const AddTask = () => {
             return;
         }
         const taskDueDate = dueDate ?? new Date();
+        const currentDate = new Date().toISOString()
         const task = {
             title,
             description,
@@ -73,6 +74,7 @@ const AddTask = () => {
             taskStatus,
             fileUrl,
             userId: user.uid,
+            taskHistory: [{ activity: "You Created this task", timestamp: currentDate }]
         };
 
         // const taskId: any = await saveTaskToFirestore(task); // Save to Firestore
@@ -81,7 +83,7 @@ const AddTask = () => {
         // dispatch(addTask({ id: taskId, ...task }));
         try {
             // Dispatch the async action to add the task
-            await dispatch(addTaskToFirestore(task));
+            await dispatch(addTaskToFirestore(task))
             console.log('Task added successfully');
         } catch (error) {
             console.error('Failed to add task: ', error);
