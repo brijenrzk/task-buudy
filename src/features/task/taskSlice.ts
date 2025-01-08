@@ -1,7 +1,8 @@
 import { db } from '@/services/firestore';
 import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
 
-import { collection, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, arrayRemove, orderBy, limit } from 'firebase/firestore';
+import axios from "axios";
 
 // Define Task interface
 interface Task {
@@ -11,7 +12,7 @@ interface Task {
     category: string;
     dueDate: string;
     taskStatus: string;
-    fileUrl: string;
+    fileUrl: Array<string>;
     userId: string;
     taskHistory: Array<Object>;
 }
@@ -21,14 +22,37 @@ interface TasksState {
     loading: boolean;
     error: string | null;
     viewTaskModal: boolean;
+    taskView: string
+    uploadedImages: Array<any>,
+    uploadStatus: string,
+    uploadError: any,
+    deleteStatus: string,
+    updateImages: Array<any>,
+    updateStatus: string,
+    updateError: any,
+    sort: string
 }
+interface UploadResponse {
+    secure_url: string;
+}
+
 
 const initialState: TasksState = {
     tasks: [],
     loading: false,
     error: null,
-    viewTaskModal: false
+    viewTaskModal: false,
+    taskView: "list",
+    uploadedImages: [],
+    uploadStatus: "idle",
+    uploadError: null,
+    deleteStatus: 'idle',
+    updateImages: [],
+    updateStatus: "idle",
+    updateError: null,
+    sort: "asc"
 };
+
 
 
 // Fetch tasks from Firestore
@@ -36,7 +60,7 @@ export const fetchTasksFromFirestore = createAsyncThunk(
     'tasks/fetchTasks',
     async (userId: string) => {
         const tasksRef = collection(db, 'tasks');
-        const q = query(tasksRef, where('userId', '==', userId));
+        const q = query(tasksRef, where('userId', '==', userId), orderBy("dueDate"), limit(100));
         const querySnapshot = await getDocs(q);
 
         const tasks: Task[] = [];
@@ -59,6 +83,82 @@ export const fetchTasksFromFirestore = createAsyncThunk(
     }
 );
 
+//Upload file to cloudinary
+export const uploadImagesToCloudinary = createAsyncThunk<
+    string[],
+    File[],
+    { rejectValue: string }
+>(
+    'tasks/uploadImagesToCloudinary',
+    async (files, { rejectWithValue }) => {
+        try {
+            const uploadPromises = files.map((file) => {
+                console.log("files", file)
+                const formData = new FormData();
+                formData.append("file", file);
+                formData.append("upload_preset", import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET);
+                formData.append("api_key", import.meta.env.VITE_CLOUDINARY_API_KEY)
+
+                return axios.post<UploadResponse>(
+                    `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/image/upload`,
+                    formData
+                );
+            });
+
+            const responses = await Promise.all(uploadPromises);
+            return responses.map((response) => response.data.secure_url); // Return an array of URLs
+        } catch (error: any) {
+            return rejectWithValue(error);
+        }
+    }
+)
+
+
+//Update file to cloudinary
+export const updateImagesToCloudinary = createAsyncThunk<
+    string[],
+    File[],
+    { rejectValue: string }
+>(
+    'tasks/updateImagesToCloudinary',
+    async (files, { rejectWithValue }) => {
+        try {
+            const uploadPromises = files.map((file) => {
+                console.log("files", file)
+                const formData = new FormData();
+                formData.append("file", file);
+                formData.append("upload_preset", import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET);
+                formData.append("api_key", import.meta.env.VITE_CLOUDINARY_API_KEY)
+
+                return axios.post<UploadResponse>(
+                    `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/image/upload`,
+                    formData
+                );
+            });
+
+            const responses = await Promise.all(uploadPromises);
+            return responses.map((response) => response.data.secure_url); // Return an array of URLs
+        } catch (error: any) {
+            return rejectWithValue(error);
+        }
+    }
+)
+
+// Delete Image in Firestore
+export const deleteImageInFirestore = createAsyncThunk(
+    'tasks/deleteImageInFirestore',
+    async ({ id, url }: { id: string, url: string }, { rejectWithValue }) => {
+        try {
+            const taskRef = doc(db, 'tasks', id);
+            await updateDoc(taskRef, {
+                fileUrl: arrayRemove(url),
+            });
+            return { id, url }
+        } catch (error: any) {
+            return rejectWithValue(error.message);
+        }
+    }
+);
 
 // Add Task to Firestore
 export const addTaskToFirestore = createAsyncThunk(
@@ -133,14 +233,17 @@ export const updateBulkTaskStatusInFirestore = createAsyncThunk(
 // Delete Task from Firestore
 export const deleteTasksFromFirestore = createAsyncThunk(
     'tasks/deleteTasksFromFirestore',
-    async (ids: string[], { rejectWithValue }) => {
+    async (tasks: Task[], { rejectWithValue }) => {
         try {
             // Use Promise.all to delete all tasks in parallel
-            await Promise.all(ids.map(async (id) => {
-                const taskRef = doc(db, 'tasks', id);
-                await deleteDoc(taskRef);
-            }));
+            await Promise.all(tasks.map(async (task) => {
+                if (task.id) {
+                    const taskRef = doc(db, 'tasks', task.id);
+                    await deleteDoc(taskRef);
+                }
 
+            }));
+            const ids = tasks.map((task) => task.id)
             // Return the list of deleted IDs
             return ids;
         } catch (error: any) {
@@ -158,6 +261,25 @@ const tasksSlice = createSlice({
         // You can add additional actions here like updating a task in local state
         modalAction: (state, action: PayloadAction<any>) => {
             state.viewTaskModal = action.payload
+        },
+        taskViewAction: (state, action: PayloadAction<string>) => {
+            state.taskView = action.payload
+        },
+        sortTaskAction: (state, action: PayloadAction<string>) => {
+            const newTask = [...state.tasks]
+            if (action.payload === "asc") {
+                state.sort = "asc"
+                newTask.sort(function (a: any, b: any) {
+                    return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+                });
+            } else {
+                state.sort = "des"
+                newTask.sort(function (a: any, b: any) {
+                    return new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime();
+                });
+            }
+
+            state.tasks = newTask;
         }
     },
     extraReducers: (builder) => {
@@ -178,7 +300,13 @@ const tasksSlice = createSlice({
             })
             .addCase(addTaskToFirestore.fulfilled, (state, action) => {
                 state.loading = false;
-                state.tasks.push(action.payload);
+                const newTask = [...state.tasks, action.payload]
+
+                newTask.sort(function (a: any, b: any) {
+                    return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+                });
+                state.tasks = newTask;
+
             })
             .addCase(addTaskToFirestore.rejected, (state, action) => {
                 state.loading = false;
@@ -242,9 +370,59 @@ const tasksSlice = createSlice({
             .addCase(deleteTasksFromFirestore.rejected, (state, action) => {
                 state.loading = false;
                 state.error = action.payload as string;
+            })
+            //Upload image
+            .addCase(uploadImagesToCloudinary.pending, (state) => {
+                state.loading = true;
+                state.uploadStatus = "uploading";
+                state.uploadError = null;
+            })
+            .addCase(uploadImagesToCloudinary.fulfilled, (state, action: PayloadAction<string[]>) => {
+                state.loading = false
+                state.uploadStatus = "succeeded";
+                state.uploadedImages = action.payload;
+            })
+            .addCase(uploadImagesToCloudinary.rejected, (state, action) => {
+                state.uploadStatus = "failed";
+                state.uploadError = action.payload || "Unknown error occurred";
+            })
+            //Update image
+            .addCase(updateImagesToCloudinary.pending, (state) => {
+                state.loading = true;
+                state.updateStatus = "uploading";
+                state.updateError = null;
+            })
+            .addCase(updateImagesToCloudinary.fulfilled, (state, action: PayloadAction<string[]>) => {
+                state.loading = false;
+                state.updateStatus = "succeeded";
+                state.updateImages = action.payload;
+            })
+            .addCase(updateImagesToCloudinary.rejected, (state, action) => {
+                state.loading = false;
+                state.updateStatus = "failed";
+                state.updateError = action.payload || "Unknown error occurred";
+            })
+            //Delete Image from Firestore
+            .addCase(deleteImageInFirestore.pending, (state) => {
+                state.loading = true;
+            })
+            .addCase(deleteImageInFirestore.fulfilled, (state, action) => {
+                state.loading = false;
+                const { id, url } = action.payload;
+
+                // Find the task and remove the image URL from its fileUrl array
+                const taskIndex = state.tasks.findIndex(task => task.id === id);
+                if (taskIndex !== -1) {
+                    state.tasks[taskIndex].fileUrl = state.tasks[taskIndex].fileUrl.filter(fileUrl => fileUrl !== url);
+                }
+            })
+            .addCase(deleteImageInFirestore.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload as string;
             });
+
     }
 });
-export const { modalAction } = tasksSlice.actions;
+export const { modalAction, taskViewAction, sortTaskAction } = tasksSlice.actions;
 
 export default tasksSlice.reducer;

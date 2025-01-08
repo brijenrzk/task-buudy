@@ -15,6 +15,7 @@ import { logout } from '../services/firebaseConfig';
 import { logoutAction } from '../features/auth/authSlice';
 import { clearUser } from '../features/auth/userSlice';
 import Cookies from 'js-cookie';
+import { LogOut } from 'lucide-react'
 
 const Navbar = () => {
 
@@ -37,16 +38,16 @@ const Navbar = () => {
             </div>
             <div className='flex items-center gap-2'>
                 <DropdownMenu>
-                    <DropdownMenuTrigger>
+                    <DropdownMenuTrigger className='flex items-center gap-4'>
                         <img src={user.photoURL} className='h-10 w-10 rounded-full' alt={user.displayName} />
+                        <h3 className='hidden md:block'>{user.displayName}</h3>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
-                        <DropdownMenuItem onClick={handleLogout}>Logout</DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleLogout}><LogOut />Logout</DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
 
 
-                <h3 className='hidden md:block'>{user.displayName}</h3>
             </div>
 
         </div>

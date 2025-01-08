@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import Header from '@/components/Header';
 import TaskView from '@/components/TaskView';
+import BoardView from '@/components/BoardView';
 
 
 
@@ -15,6 +16,7 @@ const Dashboard = () => {
     const navigate = useNavigate();
     const user = useSelector((state: RootState) => state.user.user);
     const status = useSelector((state: RootState) => state.user.status);
+    const taskView = useSelector((state: RootState) => state.task.taskView)
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedCategory, setSelectedCategory] = useState<string>("all");
     const [selectedDate, setSelectedDate] = useState<any>();
@@ -48,7 +50,13 @@ const Dashboard = () => {
                         onCategoryChange={setSelectedCategory}
                         onDateChange={setSelectedDate}
                     />
-                    <TaskView searchQuery={searchQuery} selectedCategory={selectedCategory} selectedDate={selectedDate} />
+                    {taskView === 'list' ?
+                        <TaskView searchQuery={searchQuery} selectedCategory={selectedCategory} selectedDate={selectedDate} />
+                        :
+                        <BoardView searchQuery={searchQuery} selectedCategory={selectedCategory} selectedDate={selectedDate} />
+                    }
+
+
 
                 </div>
             ) : (<p>sign in to dashboard</p>)}

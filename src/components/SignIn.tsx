@@ -29,7 +29,7 @@ const SignIn = () => {
     }
     return (
         <div className=''>
-            <Button className='rounded-xl p-6' onClick={handleGoogleSignIn}><img src='/google.png' className='h-5 w-5' />Continue with Google</Button>
+            <Button className='rounded-xl p-6 lg:p-10 lg:w-[85%] md:text-xl lg:text-2xl' onClick={handleGoogleSignIn}><img src='/google.png' className='h-5 w-5 lg:h-7 lg:w-7 lg:mr-2' />Continue with Google</Button>
         </div>
     )
 }
