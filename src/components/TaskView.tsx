@@ -201,6 +201,7 @@ const TaskView: React.FC<TaskViewProps> = ({ searchQuery, selectedCategory, sele
     const handleModalOpen = (task: any) => {
         setSelectedTask(task);
         dispatch(modalAction(true))
+        console.log(isModalOpen)
         setIsModalOpen(true)
     }
     const sortTask = () => {
