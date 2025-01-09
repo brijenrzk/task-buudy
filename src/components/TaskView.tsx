@@ -179,7 +179,6 @@ const TaskView: React.FC<TaskViewProps> = ({ searchQuery, selectedCategory, sele
 
     }
     useEffect(() => {
-        // Trigger a re-render when tasks change
     }, [tasks]);
 
     const handleUpdateTaskStatus = (e: any, task: any) => {
@@ -202,7 +201,7 @@ const TaskView: React.FC<TaskViewProps> = ({ searchQuery, selectedCategory, sele
     const handleModalOpen = (task: any) => {
         setSelectedTask(task);
         dispatch(modalAction(true))
-
+        console.log(isModalOpen)
         setIsModalOpen(true)
     }
     const sortTask = () => {
