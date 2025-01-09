@@ -301,7 +301,7 @@ const AddTask = () => {
                                 <IoCloseSharp onClick={() => setModalOpen(false)} size={28} />
                             </DrawerClose>
                         </DrawerTitle>
-                        <DrawerDescription className='flex flex-col gap-2 mt-4 justify-start'>
+                        <DrawerDescription className='flex flex-col gap-2 mt-4 justify-start h-[70vh] overflow-y-scroll'>
                             <Input required type="text" value={title} placeholder="Task title" className={`shadow-none mb-2 ${titleError && "border-red-500"}`} onChange={(e) => setTitle(e.target.value)} />
                             <ReactQuill theme="snow" modules={modules} value={description} onChange={setDescription} className='mb-4' />
                             <Label className='mt-10 justify-self-start text-left font-normal'>Task Category<sup>*</sup></Label>
