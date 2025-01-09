@@ -17,7 +17,7 @@ import { IoIosCheckmarkCircle, IoMdArrowDropdown, IoMdArrowDropup } from "react-
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/redux/store";
 import { useEffect, useRef, useState } from "react";
-import { deleteTasksFromFirestore, fetchTasksFromFirestore, modalAction, sortTaskAction, updateBulkTaskStatusInFirestore, updateTaskStatusInFirestore } from "@/features/task/taskSlice";
+import { addTaskToFirestore, deleteTasksFromFirestore, fetchTasksFromFirestore, modalAction, sortTaskAction, updateBulkTaskStatusInFirestore, updateTaskStatusInFirestore } from "@/features/task/taskSlice";
 import {
     Select,
     SelectContent,
@@ -35,10 +35,15 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Ellipsis } from "lucide-react";
-import { formatCustomDate } from "@/lib/utils";
+import { Ellipsis, Plus } from "lucide-react";
+import { cn, formatCustomDate } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { MdOutlineDragIndicator } from "react-icons/md";
+import { Input } from "./ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { format } from "date-fns";
+import { Calendar } from "./ui/calendar";
+import { useAuth } from "@/hooks/useAuth";
 interface TaskViewProps {
     searchQuery: string;
     selectedCategory: string;
@@ -60,6 +65,16 @@ const TaskView: React.FC<TaskViewProps> = ({ searchQuery, selectedCategory, sele
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
     const [selectedTask, setSelectedTask] = useState<any>(null);
     const { sort } = useSelector((state: RootState) => state.task)
+    const [title, setTitle] = useState('');
+    const [category, setCategory] = useState('');
+    const [dueDate, setDueDate] = useState<Date | undefined>(undefined)
+    const [taskStatus, setTaskStatus] = useState('');
+    const [titleError, setTitleError] = useState<boolean>(false)
+    const [categoryError, setCategoryError] = useState<boolean>(false)
+    const [dateError, setDateError] = useState<boolean>(false)
+    const [statusError, setStatusError] = useState<boolean>(false)
+    const { user } = useAuth();
+    const [addOpen, setAddOpen] = useState<boolean>(false)
     const filteredTasks = tasks.filter((task: any) => {
         const matchesSearchQuery = searchQuery
             ? task.title.toLowerCase().includes(searchQuery.toLowerCase())
@@ -214,6 +229,62 @@ const TaskView: React.FC<TaskViewProps> = ({ searchQuery, selectedCategory, sele
 
     }
 
+    const handleSubmit = async () => {
+        if (title.trim() == '') {
+            setTitleError(true)
+            return;
+        } else { setTitleError(false) }
+
+        if (dueDate == undefined) {
+            setDateError(true)
+            return;
+        } else { setStatusError(false) }
+        if (taskStatus.trim() == '') {
+            setStatusError(true)
+            return;
+        } else { setStatusError(false) }
+        if (category.trim() == '') {
+            setCategoryError(true)
+            return;
+        } else { setCategoryError(false) }
+        if (!user) {
+            return;
+        }
+        const taskDueDate = dueDate
+        const currentDate = new Date().toISOString()
+        const task = {
+            title,
+            description: '',
+            category,
+            dueDate: new Date(taskDueDate).toISOString(),
+            taskStatus,
+            fileUrl: [],
+            userId: user.uid,
+            taskHistory: [{ activity: "You Created this task", timestamp: currentDate }]
+        };
+
+        try {
+            await dispatch(addTaskToFirestore(task))
+        } catch (error) {
+            console.error('Failed to add task: ', error);
+        }
+        closeAddOpen()
+        toast({
+            title: "Task Created Sucessfully.",
+        })
+    }
+    const closeAddOpen = () => {
+        setAddOpen(false)
+        setTitle('')
+        setCategory('')
+        setDueDate(undefined)
+        setTaskStatus('')
+        setTitleError(false)
+        setCategoryError(false)
+        setDateError(false)
+        setStatusError(false)
+    }
+
     return (
         <div className='px-8 flex flex-col gap-5 mt-5 md:mt-8'>
             <Table className="hidden md:table border-t">
@@ -222,18 +293,87 @@ const TaskView: React.FC<TaskViewProps> = ({ searchQuery, selectedCategory, sele
                     <TableHead className="w-[50px]"></TableHead>
                     <TableHead className="w-[50px]"></TableHead>
                     <TableHead className="md:w-[40%]">Task Name</TableHead>
-                    <TableHead className="w-[250px] cursor-pointer flex items-center" onClick={sortTask}>Due on{sort === "asc" ? <IoMdArrowDropdown /> : <IoMdArrowDropup />}</TableHead>
-                    <TableHead className="w-[20%]">Task Status</TableHead>
+
+                    <TableHead className="w-[150px] cursor-pointer flex items-center" onClick={sortTask}>Due on{sort === "asc" ? <IoMdArrowDropdown /> : <IoMdArrowDropup />}</TableHead>
+                    <TableHead className="w-[20%] text-left">Task Status</TableHead>
                     <TableHead className=" w-[8%]">Task Category</TableHead>
                     <TableHead></TableHead>
+                    <TableHead className=""></TableHead>
+                    <TableHead className=""></TableHead>
+                    <TableHead className=""></TableHead>
+                    <TableHead className=""></TableHead>
                 </TableHeader>
             </Table>
             <Accordion type="single" collapsible defaultValue='item-1'>
                 <AccordionItem value="item-1" className='border-none'>
                     <AccordionTrigger className='bg-[#FAC3FF] rounded-t-2xl px-4 font-bold'>Todo ({todoTasks.length})</AccordionTrigger>
                     <AccordionContent onDrop={() => handleOnDrop("todo")} onDragOver={(e) => handleOnDragOver(e)}>
-                        <Table className='bg-gray-100 rounded-b-2xl'>
+                        <div className="pl-20 flex-row w-full h-14 items-center bg-gray-100 border-b hidden lg:flex"><div className="flex items-center cursor-pointer" onClick={() => setAddOpen(true)}><Plus className="text-[#7B1984] mr-2" /><p>ADD TASK</p></div></div>
 
+                        {addOpen &&
+                            <div className="pl-20 flex-row w-full h-32 items-center bg-gray-100 border-b gap-28 hidden lg:flex">
+                                <div className="flex flex-col gap-4 w-[33%]">
+                                    <Input type="text" value={title} placeholder="Task title" className={`shadow-none mt-2 h-12 ${titleError && "border-red-500"}`} onChange={(e) => setTitle(e.target.value)} />
+                                    <div className="flex">
+                                        <Button className='w-28 rounded-full bg-[#7B1984] hover:bg-[#7b1984bb]' onClick={handleSubmit}>
+                                            {loading ? <div className="w-4 h-4 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+                                                :
+                                                <>Create</>
+                                            }
+                                        </Button>
+                                        <Button variant="outline" onClick={closeAddOpen} className='w-28 rounded-full'>Cancel</Button>
+                                    </div>
+
+                                </div>
+
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant={"outline"}
+                                            className={cn(
+                                                "w-[240px] justify-start text-left font-normal shadow-none bg-gray-100",
+                                                !dueDate && "text-muted-foreground",
+                                                dateError && "!border-red-500"
+                                            )}
+                                        >
+                                            {/* <CalendarIcon /> */}
+                                            {dueDate ? format(dueDate, "PPP") : <span>Pick a date</span>}
+                                        </Button>
+                                    </PopoverTrigger>
+
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar
+                                            mode="single"
+                                            selected={dueDate}
+                                            onSelect={setDueDate}
+                                            initialFocus
+
+                                        />
+                                    </PopoverContent>
+                                </Popover>
+                                <Select onValueChange={setTaskStatus}>
+                                    <SelectTrigger className={`w-[180px]  shadow-none ${statusError && "border-red-500"}`} >
+                                        <SelectValue placeholder="Status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="todo">TODO</SelectItem>
+                                        <SelectItem value="progress">IN-PROGRESS</SelectItem>
+                                        <SelectItem value="completed">DONE</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <Select onValueChange={setCategory}>
+                                    <SelectTrigger className={`w-[180px]  shadow-none ${categoryError && "border-red-500"}`} >
+                                        <SelectValue placeholder="Category" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="work">Work</SelectItem>
+                                        <SelectItem value="personal">Personal</SelectItem>
+                                    </SelectContent>
+                                </Select>
+
+                            </div>
+                        }
+                        <Table className='bg-gray-100 rounded-b-2xl'>
                             <TableBody className="w-full">
                                 {todoTasks.length < 1 && <div className="h-20 flex justify-center items-center"><p className="text-lg">No Tasks in To-Do</p></div>}
                                 {todoTasks.map((task: any) => (
@@ -375,7 +515,8 @@ const TaskView: React.FC<TaskViewProps> = ({ searchQuery, selectedCategory, sele
                 </AccordionItem>
             </Accordion>
 
-            {selectedTasks.length > 0 &&
+            {
+                selectedTasks.length > 0 &&
                 <div className="fixed flex bottom-8 h-20 w-[90%] md:w-[40%] bg-[#1A1C20] left-[50%] translate-x-[-50%] rounded-xl shadow-md px-4 items-center justify-between">
                     <div className="border border-white w-[35%] h-10 rounded-full flex items-center justify-center">
                         <p className="text-white font-bold text-[0.6em] lg:text-base">{selectedTasks.length} Tasks Selected</p>
@@ -398,12 +539,14 @@ const TaskView: React.FC<TaskViewProps> = ({ searchQuery, selectedCategory, sele
 
                 </div>
             }
-            {selectedTask && (
-                <ViewTask task={selectedTask} />
-            )}
+            {
+                selectedTask && (
+                    <ViewTask task={selectedTask} />
+                )
+            }
 
 
-        </div>
+        </div >
     )
 }
 

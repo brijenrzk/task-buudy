@@ -163,6 +163,10 @@ const AddTask = () => {
         setCategory('')
         setDueDate(undefined)
         setFiles([])
+        setTitleError(false)
+        setCategoryError(false)
+        setDateError(false)
+        setStatusError(false)
     }
 
     //Desktop

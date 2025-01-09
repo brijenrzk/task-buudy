@@ -195,6 +195,9 @@ const ViewTask = ({ task }: { task: any }) => {
     const checkModel = () => {
         dispatch(modalAction(false))
         setFiles([])
+        setTitleError(false)
+        setCategoryError(false)
+        setStatusError(false)
     }
 
 
@@ -332,8 +335,8 @@ const ViewTask = ({ task }: { task: any }) => {
                                     <h3 className='text-xl'>Activity</h3>
                                 </div>
                                 <div className='flex flex-col gap-4 pt-4 px-8 h-[50vh] overflow-x-scroll'>
-                                    {task.taskHistory.map((history: any) => (
-                                        <div className='flex justify-between border-b border-gray-300 pb-2'>
+                                    {task.taskHistory.map((history: any, index: number) => (
+                                        <div key={index} className='flex justify-between border-b border-gray-300 pb-2'>
                                             <p className='text-left text-sm w-[75%]'>{history.activity}</p>
                                             <p className='text-right text-sm w-[35%]'>{formatDate(history.timestamp)}</p>
                                         </div>
@@ -508,8 +511,8 @@ const ViewTask = ({ task }: { task: any }) => {
 
                             <TabsContent value="activity">
                                 <div className='flex flex-col gap-4 pt-4'>
-                                    {task.taskHistory.map((history: any) => (
-                                        <div className='flex justify-between border-b pb-2'>
+                                    {task.taskHistory.map((history: any, index: number) => (
+                                        <div key={index} className='flex justify-between border-b pb-2'>
                                             <p className='text-left text-sm w-[75%]'>{history.activity}</p>
                                             <p className='text-right text-sm w-[35%]'>{formatDate(history.timestamp)}</p>
                                         </div>
