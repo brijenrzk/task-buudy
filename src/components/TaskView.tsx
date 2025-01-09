@@ -38,6 +38,7 @@ import {
 import { Ellipsis } from "lucide-react";
 import { formatCustomDate } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { MdOutlineDragIndicator } from "react-icons/md";
 interface TaskViewProps {
     searchQuery: string;
     selectedCategory: string;
@@ -97,17 +98,15 @@ const TaskView: React.FC<TaskViewProps> = ({ searchQuery, selectedCategory, sele
             setCompletedTasks(tasks.filter((task: any) => task.taskStatus === 'completed'))
         }
 
-    }, [loading, sort])
+    }, [loading, sort, tasks])
 
     const taskRef = useRef()
     const taskContainer = useRef()
 
     const handleOnDrag = (e: any, id: any, taskStatus: any) => {
-        console.log("id", id)
         e.target.style.opacity = 0.5
         taskRef.current = id
         taskContainer.current = taskStatus
-        console.log(taskRef.current)
     }
     const handleDragEnd = (e: any,) => {
         e.target.style.opacity = 1
@@ -137,7 +136,6 @@ const TaskView: React.FC<TaskViewProps> = ({ searchQuery, selectedCategory, sele
                     setInProgressTasks(inProgressTasks.filter((task: any) => task.id != taskRef.current))
                     break;
                 case 'completed':
-                    console.log(taskRef.current)
                     setCompletedTasks(completedTasks.filter((task: any) => task.id != taskRef.current))
                     break;
             }
@@ -155,7 +153,7 @@ const TaskView: React.FC<TaskViewProps> = ({ searchQuery, selectedCategory, sele
     }
 
     const handleSelectTask = (e: any, task: any, taskId: string | undefined) => {
-        if (e === true && taskId) {
+        if (e === true && task.id) {
             setSelectedTasks((prev) => [...prev, task])
         } else {
             let newSelectedTask = selectedTasks.filter((task) => task.id != taskId)
@@ -180,16 +178,19 @@ const TaskView: React.FC<TaskViewProps> = ({ searchQuery, selectedCategory, sele
         }
 
     }
+    useEffect(() => {
+        // Trigger a re-render when tasks change
+    }, [tasks]);
 
     const handleUpdateTaskStatus = (e: any, task: any) => {
-        console.log(e)
+
         if (selectedTasks) {
             dispatch(updateBulkTaskStatusInFirestore({ selectedTasks: [task], taskStatus: e }));
         }
     }
 
     const handleBulkUpdateTaskStatus = (e: any) => {
-        console.log(e)
+
         if (selectedTasks) {
             dispatch(updateBulkTaskStatusInFirestore({ selectedTasks: selectedTasks, taskStatus: e }));
             setSelectedTasks([])
@@ -201,11 +202,11 @@ const TaskView: React.FC<TaskViewProps> = ({ searchQuery, selectedCategory, sele
     const handleModalOpen = (task: any) => {
         setSelectedTask(task);
         dispatch(modalAction(true))
-        console.log(isModalOpen)
+
         setIsModalOpen(true)
     }
     const sortTask = () => {
-        console.log(sort)
+
         if (sort === "asc") {
             dispatch(sortTaskAction("des"))
         } else {
@@ -213,10 +214,12 @@ const TaskView: React.FC<TaskViewProps> = ({ searchQuery, selectedCategory, sele
         }
 
     }
+
     return (
         <div className='px-8 flex flex-col gap-5 mt-5 md:mt-8'>
             <Table className="hidden md:table border-t">
                 <TableHeader>
+                    <TableHead className="w-[50px]"></TableHead>
                     <TableHead className="w-[50px]"></TableHead>
                     <TableHead className="w-[50px]"></TableHead>
                     <TableHead className="md:w-[40%]">Task Name</TableHead>
@@ -236,7 +239,11 @@ const TaskView: React.FC<TaskViewProps> = ({ searchQuery, selectedCategory, sele
                                 {todoTasks.length < 1 && <div className="h-20 flex justify-center items-center"><p className="text-lg">No Tasks in To-Do</p></div>}
                                 {todoTasks.map((task: any) => (
                                     <TableRow className='h-16 items-center cursor-pointer' key={task.id} draggable onDragStart={(e) => handleOnDrag(e, task.id, task.taskStatus)} onDragEnd={(e) => handleDragEnd(e)}>
-                                        <TableCell className="w-[50px] text-center "><Checkbox className='data-[state=checked]:bg-[#7B1984] data-[state=checked]:border-0' onCheckedChange={(e) => handleSelectTask(e, task, task.id)} /></TableCell>
+                                        <TableCell className="w-[50px] text-center ">
+                                            <Checkbox className='data-[state=checked]:bg-[#7B1984] data-[state=checked]:border-0' onCheckedChange={(e) => handleSelectTask(e, task, task.id)} />
+
+                                        </TableCell>
+                                        <TableCell className="w-[50px]"><MdOutlineDragIndicator /></TableCell>
                                         <TableCell className="w-[50px]"><IoIosCheckmarkCircle size={20} className='text-gray-400' /></TableCell>
 
                                         <TableCell className="w-auto md:w-[40%]" onClick={() => handleModalOpen(task)}>{task.title}</TableCell>
@@ -332,7 +339,7 @@ const TaskView: React.FC<TaskViewProps> = ({ searchQuery, selectedCategory, sele
                                         <TableCell className="w-[50px] text-center "><Checkbox className='data-[state=checked]:bg-[#7B1984] data-[state=checked]:border-0' onCheckedChange={(e) => handleSelectTask(e, task, task.id)} /></TableCell>
                                         <TableCell className="w-[50px]"><IoIosCheckmarkCircle size={20} className='text-[#1B8D17]' /></TableCell>
 
-                                        <TableCell className="w-auto md:w-[40%]" onClick={() => handleModalOpen(task)}>{task.title}</TableCell>
+                                        <TableCell className="w-auto md:w-[40%] line-through" onClick={() => handleModalOpen(task)}>{task.title}</TableCell>
                                         <TableCell className="hidden md:table-cell w-[250px] " onClick={() => handleModalOpen(task)}>{formatCustomDate(task.dueDate)}</TableCell>
 
                                         <TableCell className="hidden md:table-cell text-left w-[20%]">
@@ -372,7 +379,7 @@ const TaskView: React.FC<TaskViewProps> = ({ searchQuery, selectedCategory, sele
             {selectedTasks.length > 0 &&
                 <div className="fixed flex bottom-8 h-20 w-[90%] md:w-[40%] bg-[#1A1C20] left-[50%] translate-x-[-50%] rounded-xl shadow-md px-4 items-center justify-between">
                     <div className="border border-white w-[35%] h-10 rounded-full flex items-center justify-center">
-                        <p className="text-white font-bold text-[0.6em] md:text-base">{selectedTasks.length} Tasks Selected</p>
+                        <p className="text-white font-bold text-[0.6em] lg:text-base">{selectedTasks.length} Tasks Selected</p>
                     </div>
                     <div className="flex gap-2 justify-end w-[65%]">
                         <Select onValueChange={(e) => handleBulkUpdateTaskStatus(e)}>

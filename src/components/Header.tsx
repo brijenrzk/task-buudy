@@ -65,6 +65,9 @@ const Header: React.FC<HeaderProps> = ({ onSearch, onCategoryChange, onDateChang
 
     const handleListView = (taskView: string) => {
         dispatch(taskViewAction(taskView))
+        setSearchQuery('')
+        setCategory('all')
+        setDate(undefined)
     }
 
 
@@ -87,7 +90,7 @@ const Header: React.FC<HeaderProps> = ({ onSearch, onCategoryChange, onDateChang
                     <div className='flex gap-4 items-center'>
                         <Label htmlFor="ema" className='text-gray-500'>Filter by:</Label>
                         <div className='flex gap-4'>
-                            <Select onValueChange={setCategory}>
+                            <Select onValueChange={setCategory} value={category}>
                                 <SelectTrigger className="w-[140px] rounded-full">
                                     <SelectValue placeholder="Category" />
                                 </SelectTrigger>

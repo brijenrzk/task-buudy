@@ -47,7 +47,7 @@ import { X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 const AddTask = () => {
     const { toast } = useToast()
-    const [dueDate, setDueDate] = useState<Date | undefined>(new Date())
+    const [dueDate, setDueDate] = useState<Date | undefined>(undefined)
     const dispatch = useDispatch<AppDispatch>();
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
@@ -61,6 +61,7 @@ const AddTask = () => {
     const { loading } = useSelector((state: RootState) => state.task);
     const [titleError, setTitleError] = useState<boolean>(false)
     const [categoryError, setCategoryError] = useState<boolean>(false)
+    const [dateError, setDateError] = useState<boolean>(false)
     const [statusError, setStatusError] = useState<boolean>(false)
     const isDesktop = useMediaQuery({ query: '(min-width: 1224px)' })
     const modules = {
@@ -69,15 +70,16 @@ const AddTask = () => {
         ],
     }
     useEffect(() => {
+        setDueDate(undefined)
+    }, [])
+    useEffect(() => {
         return () => {
             files.forEach((file) => URL.revokeObjectURL(URL.createObjectURL(file)));
         };
     }, [files]);
     useEffect(() => {
         if (uploadStatus === "succeeded") {
-            console.log('Upload completed successfully');
             // You can trigger task creation here if needed
-            console.log("merelo bulaya")
             createTask()
 
         }
@@ -100,7 +102,7 @@ const AddTask = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log(title, description, category, taskStatus, dueDate)
+
         if (files.length > 0) {
             dispatch(uploadImagesToCloudinary(files));
         } else {
@@ -108,7 +110,6 @@ const AddTask = () => {
         }
     };
     const createTask = async () => {
-        console.log(title, description, category, taskStatus, dueDate)
         if (title.trim() == '') {
             setTitleError(true)
             return;
@@ -117,15 +118,18 @@ const AddTask = () => {
             setCategoryError(true)
             return;
         } else { setCategoryError(false) }
+        if (dueDate == undefined) {
+            setDateError(true)
+            return;
+        } else { setStatusError(false) }
         if (taskStatus.trim() == '') {
             setStatusError(true)
             return;
         } else { setStatusError(false) }
         if (!user) {
-            console.error('User not authenticated.');
             return;
         }
-        const taskDueDate = dueDate ?? new Date();
+        const taskDueDate = dueDate
         const currentDate = new Date().toISOString()
         const task = {
             title,
@@ -140,7 +144,6 @@ const AddTask = () => {
 
         try {
             await dispatch(addTaskToFirestore(task))
-            console.log('Task added successfully');
         } catch (error) {
             console.error('Failed to add task: ', error);
         }
@@ -158,7 +161,7 @@ const AddTask = () => {
         setDescription('')
         setTaskStatus('')
         setCategory('')
-        setDueDate(new Date())
+        setDueDate(undefined)
         setFiles([])
     }
 
@@ -203,7 +206,8 @@ const AddTask = () => {
                                                     variant={"outline"}
                                                     className={cn(
                                                         "w-[240px] justify-start text-left font-normal shadow-none",
-                                                        !dueDate && "text-muted-foreground"
+                                                        !dueDate && "text-muted-foreground",
+                                                        dateError && "!border-red-500"
                                                     )}
                                                 >
                                                     {/* <CalendarIcon /> */}
@@ -217,6 +221,7 @@ const AddTask = () => {
                                                     selected={dueDate}
                                                     onSelect={setDueDate}
                                                     initialFocus
+
                                                 />
                                             </PopoverContent>
                                         </Popover>
@@ -322,7 +327,8 @@ const AddTask = () => {
                                         variant={"outline"}
                                         className={cn(
                                             "w-[240px] justify-start text-left font-normal shadow-none",
-                                            !dueDate && "text-muted-foreground"
+                                            !dueDate && "text-muted-foreground",
+                                            dateError && "!border-red-500"
                                         )}
                                     >
                                         {/* <CalendarIcon /> */}

@@ -319,7 +319,9 @@ const tasksSlice = createSlice({
             .addCase(updateTaskToFirestore.fulfilled, (state, action) => {
                 state.loading = false;
                 const index = state.tasks.findIndex((task) => task.id === action.payload.id);
-                state.tasks[index] = action.payload.taskData;
+                let updatedTask = action.payload.taskData
+                updatedTask.id = action.payload.id
+                state.tasks[index] = updatedTask;
             })
             .addCase(updateTaskToFirestore.rejected, (state, action) => {
                 state.loading = false;
@@ -331,10 +333,12 @@ const tasksSlice = createSlice({
             })
             .addCase(updateTaskStatusInFirestore.fulfilled, (state, action) => {
                 state.loading = false;
-                const index = state.tasks.findIndex((task) => task.id === action.payload.id);
-                if (index !== -1) {
-                    state.tasks[index].taskStatus = action.payload.taskStatus;
-                }
+                const updatedTasks = state.tasks.map((task) =>
+                    task.id === action.payload.id
+                        ? { ...task, taskStatus: action.payload.taskStatus }
+                        : task
+                );
+                state.tasks = updatedTasks;
             })
             .addCase(updateTaskStatusInFirestore.rejected, (state, action) => {
                 state.loading = false;

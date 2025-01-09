@@ -222,7 +222,7 @@ const BoardView: React.FC<TaskViewProps> = ({ searchQuery, selectedCategory, sel
                     {completedTasks.map((task: any) => (
                         <div key={task.id} className='h-56 cursor-pointer w-full bg-white rounded-lg flex flex-col justify-between px-4 py-4 ' draggable onDragStart={(e) => handleOnDrag(e, task.id, task.taskStatus)} onDragEnd={(e) => handleDragEnd(e)}>
                             <div className='flex justify-between items-start'>
-                                <h2 className='font-bold text-2xl  w-[80%]' onClick={() => handleModalOpen(task)}>{task.title} </h2>
+                                <h2 className='font-bold text-2xl  w-[80%] line-through' onClick={() => handleModalOpen(task)}>{task.title} </h2>
                                 <DropdownMenu>
                                     <DropdownMenuTrigger><Ellipsis /></DropdownMenuTrigger>
                                     <DropdownMenuContent>

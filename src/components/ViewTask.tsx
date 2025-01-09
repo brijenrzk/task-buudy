@@ -160,7 +160,8 @@ const ViewTask = ({ task }: { task: any }) => {
             console.error('User not authenticated.');
             return;
         }
-        const taskDueDate = dueDate ?? new Date();
+        const taskDueDate = dueDate;
+        if (!taskDueDate) { return }
         const currentDate = new Date().toISOString()
         const taskHistory = [...task.taskHistory, { activity: "You Updated this task", timestamp: currentDate }]
         const newUrl = [...tas.fileUrl, ...updateImages]
@@ -235,7 +236,7 @@ const ViewTask = ({ task }: { task: any }) => {
                                                         variant={"outline"}
                                                         className={cn(
                                                             "w-[240px] justify-start text-left font-normal shadow-none",
-                                                            !dueDate && "text-muted-foreground"
+                                                            !dueDate && "text-muted-foreground border-red-500"
                                                         )}
                                                     >
                                                         {/* <CalendarIcon /> */}
@@ -286,7 +287,7 @@ const ViewTask = ({ task }: { task: any }) => {
                                                     <X className='absolute right-[-8px] top-[-8px] bg-gray-100 rounded-full shadow-sm h-6 w-6 p-0.5 cursor-pointer' onClick={() => removeFile(file)} />
                                                     <img key={index}
                                                         src={URL.createObjectURL(file)}
-                                                        className='h-40 w-40 rounded-sm' />
+                                                        className='h-40 w-40 rounded-sm aspect-square object-contain' />
 
                                                 </div>
 
@@ -318,7 +319,7 @@ const ViewTask = ({ task }: { task: any }) => {
                                                     </Dialog>
                                                     <img key={index}
                                                         src={url}
-                                                        className='h-40 w-40 rounded-sm' />
+                                                        className='h-40 w-40 rounded-sm aspect-square object-contain' />
 
                                                 </div>
 
@@ -403,7 +404,7 @@ const ViewTask = ({ task }: { task: any }) => {
                                                 variant={"outline"}
                                                 className={cn(
                                                     "w-[240px] justify-start text-left font-normal shadow-none",
-                                                    !dueDate && "text-muted-foreground"
+                                                    !dueDate && "text-muted-foreground border-red-500"
                                                 )}
                                             >
                                                 {/* <CalendarIcon /> */}
